@@ -1,0 +1,365 @@
+<title>사과 쇼츠 A/B</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one working column — controls, verdict, primary metric chart, secondary metrics, variant editors, method notes */
+:root {
+  --bg: #fbf9f9; --surface: #ffffff; --fg: #1f1a1b; --muted: #6f6567; --line: #e8e1e2;
+  --apple: #c41230; --apple-soft: #fbe7ea; --leaf: #2f7a3b; --leaf-soft: #e3f1e4; --amber: #9a6a00; --amber-soft: #fbf1d9;
+  --display: "Gowun Batang", "Nanum Myeongjo", serif;
+  --body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --v1: #c41230; --v2: #2f6db5; --v3: #2f7a3b; --v4: #8a4fb0; --v5: #b0701a; --v6: #4d5a63;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #151213; --surface: #1e1a1b; --fg: #f2ecec; --muted: #a89c9e; --line: #342c2e;
+  --apple: #ff5d72; --apple-soft: #3a1a20; --leaf: #7cc788; --leaf-soft: #1b3020; --amber: #e8b54a; --amber-soft: #352a12;
+  --v1: #ff5d72; --v2: #6aa5f0; --v3: #7cc788; --v4: #c38ae6; --v5: #e8a650; --v6: #a3b1bb; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #151213; --surface: #1e1a1b; --fg: #f2ecec; --muted: #a89c9e; --line: #342c2e;
+  --apple: #ff5d72; --apple-soft: #3a1a20; --leaf: #7cc788; --leaf-soft: #1b3020; --amber: #e8b54a; --amber-soft: #352a12;
+  --v1: #ff5d72; --v2: #6aa5f0; --v3: #7cc788; --v4: #c38ae6; --v5: #e8a650; --v6: #a3b1bb; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.55 }
+.wrap { max-width: 1040px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 64px; display: grid; gap: 28px }
+h1, h2 { font-family: var(--display); text-wrap: balance; margin: 0; font-weight: 700 }
+h1 { font-size: clamp(28px, 5vw, 40px); line-height: 1.15 }
+h2 { font-size: 21px }
+.eyebrow { font-size: 12px; letter-spacing: .08em; color: var(--apple); font-weight: 600 }
+.sub { color: var(--muted); margin: 6px 0 0; max-width: 62ch }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums }
+header { display: grid; gap: 14px }
+.controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--surface) }
+.seg button { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 14px; padding: 6px 14px; border-radius: 999px; cursor: pointer }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg) }
+label.inline { display: inline-flex; gap: 8px; align-items: center; font-size: 14px; color: var(--muted) }
+select, input, textarea { font: inherit; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px }
+textarea { width: 100%; resize: vertical; min-height: 54px }
+button.btn { font: inherit; font-size: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 8px; padding: 7px 14px; cursor: pointer }
+button.btn.primary { background: var(--apple); border-color: var(--apple); color: #fff }
+button.btn.ghost { border-color: transparent; background: transparent; color: var(--muted) }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--apple); outline-offset: 2px }
+button:disabled { opacity: .5; cursor: default }
+.banner { border-radius: 10px; padding: 12px 14px; font-size: 14px; background: var(--amber-soft); color: var(--fg); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: space-between }
+.section { display: grid; gap: 14px }
+.section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap }
+.hint { color: var(--muted); font-size: 13px }
+.verdicts { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px }
+.vcard { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 8px; min-width: 0 }
+.vcard .top { display: flex; justify-content: space-between; align-items: center; gap: 8px }
+.tag { display: inline-flex; align-items: center; gap: 6px; font-weight: 600 }
+.dot { width: 10px; height: 10px; border-radius: 50%; flex: none }
+.pill { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap }
+.pill.win { background: var(--leaf-soft); color: var(--leaf) }
+.pill.lose { background: var(--apple-soft); color: var(--apple) }
+.pill.wait { background: var(--amber-soft); color: var(--amber) }
+.pill.ctl { background: var(--line); color: var(--fg) }
+.big { font-size: 26px; line-height: 1.1 }
+.vcard .hook { color: var(--muted); font-size: 13px; overflow-wrap: anywhere }
+.chart { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; overflow-x: auto }
+.chart svg { display: block; width: 100%; min-width: 520px; height: auto }
+.chart text { fill: var(--muted); font-family: var(--body); font-size: 12px }
+.chart .lbl { fill: var(--fg); font-weight: 600 }
+.chart .val { fill: var(--fg); font-family: var(--mono) }
+.grid line { stroke: var(--line) }
+.tablebox { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14px }
+th, td { padding: 10px 12px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap }
+th:first-child, td:first-child { text-align: left }
+th { font-weight: 500; color: var(--muted); font-size: 12px; letter-spacing: .04em }
+tr:last-child td { border-bottom: 0 }
+.best { color: var(--leaf); font-weight: 600 }
+.editors { display: grid; gap: 16px }
+.editor { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 14px; min-width: 0 }
+.editor-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 14px }
+.field { display: grid; gap: 4px; min-width: 0 }
+.field span { font-size: 12px; color: var(--muted) }
+.field input { width: 100%; min-width: 0 }
+.field.wide { grid-column: 1 / -1 }
+.metric-title { font-size: 13px; font-weight: 600; margin: 0 }
+.row-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap }
+.status { font-size: 13px; color: var(--muted) }
+.method { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px }
+.method ol { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 6px; max-width: 70ch }
+.empty { background: var(--surface); border: 1px dashed var(--line); border-radius: 12px; padding: 22px; color: var(--muted); text-align: center }
+@media (prefers-reduced-motion: no-preference) { .bar { transition: width .3s ease } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">책 속 사과의 세 얼굴 · 쇼츠 실험</div>
+    <h1>어떤 첫 문장이 스와이프를 멈추게 할까</h1>
+    <p class="sub">같은 영상에 다른 훅을 붙인 쇼츠들을 나란히 비교합니다. YouTube 스튜디오의 <b>피드 노출 수</b>와 <b>시청함 비율(스와이프하지 않음)</b>을 넣으면 통계적으로 의미 있는 차이인지 계산해 줍니다.</p>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="측정 시점" id="cpSeg"></div>
+      <label class="inline" for="controlSel">기준 변형 <select id="controlSel"></select></label>
+    </div>
+  </header>
+
+  <div id="notice"></div>
+
+  <section class="section">
+    <div class="section-head"><h2>판정</h2><span class="hint" id="cpHint"></span></div>
+    <div class="verdicts" id="verdicts"></div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2>시청함 비율</h2><span class="hint">막대 끝의 선은 95% 신뢰구간입니다. 구간이 겹치면 아직 차이를 단정할 수 없어요.</span></div>
+    <div class="chart" id="chart"></div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2>세부 지표</h2><span class="hint">초록색이 해당 지표 1위</span></div>
+    <div class="tablebox"><table id="detail"></table></div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2>변형별 입력</h2>
+      <div class="row-actions"><button class="btn" id="addBtn" type="button">변형 추가</button></div>
+    </div>
+    <div class="editors" id="editors"></div>
+  </section>
+
+  <section class="method">
+    <h2>실험 진행 방법</h2>
+    <ol>
+      <li>쇼츠는 YouTube의 '테스트 및 비교' 기능이 지원되지 않아요. 변형마다 따로 업로드하되 <b>훅(첫 1~2초 자막·문구)만</b> 바꾸고 나머지 편집은 같게 둡니다.</li>
+      <li>요일과 시간대 차이를 줄이려면 같은 요일 같은 시각에 일주일 간격으로 올리거나, 하루 간격으로 순서를 바꿔 올리세요.</li>
+      <li>업로드 후 24시간, 48시간, 7일 시점에 스튜디오 › 분석 › 참여도에서 숫자를 옮겨 적습니다. 판정은 시점별로 따로 나옵니다.</li>
+      <li>핵심 지표는 시청함 비율입니다. 훅의 역할이 스와이프를 멈추게 하는 것이기 때문이에요. 평균 시청 비율과 구독 전환은 보조로 봅니다.</li>
+      <li>각 변형의 피드 노출이 수천 회를 넘기 전에는 '판단 보류'가 정상입니다. 보류 카드에 필요한 노출 수가 표시됩니다.</li>
+    </ol>
+  </section>
+</div>
+
+<script>
+(function () {
+  var CPS = [["h24", "24시간"], ["h48", "48시간"], ["d7", "7일"]];
+  var FIELDS = [
+    ["shown", "피드 노출 수", "회"], ["viewedPct", "시청함 비율", "%"], ["views", "조회수", "회"],
+    ["apv", "평균 시청 비율", "%"], ["avd", "평균 시청 시간", "초"], ["likes", "좋아요", ""],
+    ["comments", "댓글", ""], ["shares", "공유", ""], ["subs", "구독자 증가", "명"]
+  ];
+  var COLORS = ["--v1", "--v2", "--v3", "--v4", "--v5", "--v6"];
+  var SAMPLE = {
+    h24: [{ shown: 2140, viewedPct: 61.2, views: 1490, apv: 78, avd: 34, likes: 52, comments: 6, shares: 4, subs: 3 },
+          { shown: 2480, viewedPct: 68.9, views: 1930, apv: 84, avd: 37, likes: 81, comments: 11, shares: 9, subs: 7 },
+          { shown: 1960, viewedPct: 63.0, views: 1380, apv: 80, avd: 35, likes: 47, comments: 5, shares: 3, subs: 2 }]
+  };
+
+  var state = { db: null, variants: [], cp: "h24", control: null, sample: false, dbState: "loading", canWrite: true, saving: {} };
+  try { var saved = localStorage.getItem("ab-cp"); if (saved) state.cp = saved; } catch (e) {}
+
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function fmt(n, d) { if (n == null || isNaN(n)) return "–"; return Number(n).toLocaleString("ko-KR", { maximumFractionDigits: d == null ? 0 : d, minimumFractionDigits: d || 0 }); }
+  function color(i) { return "var(" + COLORS[i % COLORS.length] + ")"; }
+
+  // --- statistics ---
+  function erf(x) { var s = x < 0 ? -1 : 1; x = Math.abs(x); var t = 1 / (1 + 0.3275911 * x);
+    var y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x); return s * y; }
+  function phi(z) { return 0.5 * (1 + erf(z / Math.SQRT2)); }
+  function wilson(x, n) { if (!n) return [0, 0]; var z = 1.96, p = x / n, d = 1 + z * z / n, c = p + z * z / (2 * n),
+    h = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)); return [(c - h) / d, (c + h) / d]; }
+  function compare(a, b) {
+    var p1 = a.x / a.n, p2 = b.x / b.n, pp = (a.x + b.x) / (a.n + b.n);
+    var se = Math.sqrt(pp * (1 - pp) * (1 / a.n + 1 / b.n));
+    var z = se ? (p2 - p1) / se : 0, pv = 2 * (1 - phi(Math.abs(z)));
+    var seU = Math.sqrt(p1 * (1 - p1) / a.n + p2 * (1 - p2) / b.n);
+    var pBetter = seU ? phi((p2 - p1) / seU) : 0.5;
+    var diff = p2 - p1, need = null;
+    if (Math.abs(diff) > 1e-6) { need = Math.ceil(Math.pow(1.96 + 0.84, 2) * (p1 * (1 - p1) + p2 * (1 - p2)) / (diff * diff)); }
+    return { lift: p1 ? diff / p1 : 0, diffPts: diff * 100, p: pv, pBetter: pBetter, need: need };
+  }
+
+  function metricsOf(v, i) {
+    if (state.sample) { var s = SAMPLE.h24[i % 3]; return s; }
+    return (v.metrics && v.metrics[state.cp]) || {};
+  }
+  function rows() {
+    return state.variants.map(function (v, i) {
+      var m = metricsOf(v, i), n = +m.shown || 0, pct = +m.viewedPct || 0, views = +m.views || 0;
+      var eng = views ? ((+m.likes || 0) + (+m.comments || 0) + (+m.shares || 0)) / views * 100 : null;
+      return { v: v, i: i, m: m, n: n, x: Math.round(n * pct / 100), rate: n ? pct / 100 : null,
+        eng: eng, subsPer1k: views ? (+m.subs || 0) / views * 1000 : null, has: n > 0 && pct > 0 };
+    });
+  }
+
+  // --- rendering ---
+  function renderControls() {
+    $("cpSeg").innerHTML = CPS.map(function (c) {
+      return '<button type="button" data-cp="' + c[0] + '" aria-pressed="' + (state.cp === c[0]) + '"' + (state.sample && c[0] !== "h24" ? " disabled" : "") + '>' + c[1] + '</button>';
+    }).join("");
+    var sel = $("controlSel");
+    sel.innerHTML = state.variants.map(function (v) { return '<option value="' + esc(v.id) + '">' + esc(v.label) + '</option>'; }).join("");
+    if (state.control) sel.value = state.control;
+    $("cpHint").textContent = (state.sample ? "예시 데이터 · " : "") + "업로드 후 " + CPS.filter(function (c) { return c[0] === state.cp; })[0][1] + " 기준";
+  }
+
+  function renderNotice() {
+    var el = $("notice"), r = rows(), any = r.some(function (x) { return x.has; });
+    if (state.dbState === "none") { el.innerHTML = '<div class="banner">저장소에 연결하지 못했어요. claude.ai에 로그인한 상태로 열면 입력한 숫자가 저장됩니다.</div>'; return; }
+    if (state.sample) { el.innerHTML = '<div class="banner"><span><b>예시 데이터</b>를 보고 있어요. 실제 측정값이 아닙니다.</span><button class="btn" type="button" id="sampleOff">내 데이터로 돌아가기</button></div>'; return; }
+    if (state.dbState === "ready" && state.variants.length && !any) {
+      el.innerHTML = '<div class="banner"><span>아직 이 시점에 입력된 숫자가 없어요. 아래 입력란에 스튜디오 수치를 넣으면 판정이 나옵니다.</span><button class="btn" type="button" id="sampleOn">예시 숫자로 미리보기</button></div>'; return; }
+    el.innerHTML = "";
+  }
+
+  function renderVerdicts() {
+    var el = $("verdicts"), r = rows();
+    if (!r.length) { el.innerHTML = '<div class="empty">' + (state.dbState === "loading" ? "변형을 불러오는 중…" : "변형이 없어요. 아래 ‘변형 추가’로 첫 훅을 등록하세요.") + '</div>'; return; }
+    var ctl = r.filter(function (x) { return x.v.id === state.control; })[0] || r[0];
+    el.innerHTML = r.map(function (x) {
+      var pill, detail = "";
+      if (x === ctl) { pill = '<span class="pill ctl">기준</span>'; detail = x.has ? "다른 변형을 이 값과 비교합니다." : "기준 변형의 숫자가 필요해요."; }
+      else if (!x.has || !ctl.has) { pill = '<span class="pill wait">입력 대기</span>'; detail = "피드 노출 수와 시청함 비율을 넣어 주세요."; }
+      else {
+        var c = compare({ x: ctl.x, n: ctl.n }, { x: x.x, n: x.n });
+        var sig = c.p < 0.05;
+        pill = sig ? (c.diffPts > 0 ? '<span class="pill win">승자</span>' : '<span class="pill lose">탈락</span>') : '<span class="pill wait">판단 보류</span>';
+        detail = "기준 대비 " + (c.diffPts >= 0 ? "+" : "") + fmt(c.diffPts, 1) + "%p · " + ctl.v.label + "보다 나을 확률 " + fmt(c.pBetter * 100, 0) + "% · p=" + fmt(c.p, 3);
+        if (!sig && c.need) { var more = Math.max(0, c.need - Math.min(x.n, ctl.n)); detail += more ? " · 변형당 노출 약 " + fmt(more) + "회 더 필요" : " · 노출은 충분, 차이가 작아요"; }
+      }
+      return '<div class="vcard"><div class="top"><span class="tag"><span class="dot" style="background:' + color(x.i) + '"></span>' + esc(x.v.label) + '</span>' + pill + '</div>' +
+        '<div class="big num">' + (x.rate != null ? fmt(x.rate * 100, 1) + "%" : "–") + '</div>' +
+        '<div class="hint">' + esc(detail) + '</div><div class="hook">“' + esc(x.v.hook || "훅 문구 없음") + '”</div></div>';
+    }).join("");
+  }
+
+  function renderChart() {
+    var el = $("chart"), r = rows().filter(function (x) { return x.has; });
+    if (!r.length) { el.innerHTML = '<div class="hint" style="padding:8px">숫자가 들어오면 변형별 막대가 그려집니다.</div>'; return; }
+    var W = 720, left = 150, right = 70, rowH = 46, top = 26, H = top + r.length * rowH + 10, plotW = W - left - right;
+    var maxCI = Math.max.apply(null, r.map(function (x) { return wilson(x.x, x.n)[1]; }));
+    var maxV = Math.min(1, Math.ceil(maxCI * 10) / 10 || 0.1);
+    var sx = function (v) { return left + v / maxV * plotW; };
+    var ticks = []; for (var t = 0; t <= maxV + 1e-9; t += 0.1) ticks.push(t);
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="변형별 시청함 비율과 95% 신뢰구간"><g class="grid">';
+    ticks.forEach(function (t) { s += '<line x1="' + sx(t) + '" x2="' + sx(t) + '" y1="' + (top - 6) + '" y2="' + (H - 6) + '"/><text x="' + sx(t) + '" y="14" text-anchor="middle">' + Math.round(t * 100) + '%</text>'; });
+    s += '</g>';
+    r.forEach(function (x, k) {
+      var y = top + k * rowH, ci = wilson(x.x, x.n), c = color(x.i);
+      s += '<text class="lbl" x="0" y="' + (y + 22) + '">' + esc(x.v.label) + '</text>';
+      s += '<text x="0" y="' + (y + 38) + '">노출 ' + fmt(x.n) + '</text>';
+      s += '<rect x="' + left + '" y="' + (y + 8) + '" width="' + Math.max(1, sx(x.rate) - left) + '" height="20" rx="3" fill="' + c + '" opacity=".85"/>';
+      s += '<line x1="' + sx(ci[0]) + '" x2="' + sx(ci[1]) + '" y1="' + (y + 18) + '" y2="' + (y + 18) + '" stroke="var(--fg)" stroke-width="1.5"/>';
+      s += '<line x1="' + sx(ci[0]) + '" x2="' + sx(ci[0]) + '" y1="' + (y + 12) + '" y2="' + (y + 24) + '" stroke="var(--fg)" stroke-width="1.5"/>';
+      s += '<line x1="' + sx(ci[1]) + '" x2="' + sx(ci[1]) + '" y1="' + (y + 12) + '" y2="' + (y + 24) + '" stroke="var(--fg)" stroke-width="1.5"/>';
+      s += '<text class="val" x="' + (sx(ci[1]) + 8) + '" y="' + (y + 22) + '">' + fmt(x.rate * 100, 1) + '%</text>';
+    });
+    el.innerHTML = s + '</svg>';
+  }
+
+  function renderDetail() {
+    var r = rows();
+    var cols = [
+      ["피드 노출", function (x) { return x.n || null; }, 0, ""],
+      ["시청함 비율", function (x) { return x.rate != null ? x.rate * 100 : null; }, 1, "%"],
+      ["조회수", function (x) { return +x.m.views || null; }, 0, ""],
+      ["평균 시청 비율", function (x) { return +x.m.apv || null; }, 1, "%"],
+      ["평균 시청 시간", function (x) { return +x.m.avd || null; }, 0, "초"],
+      ["참여율", function (x) { return x.eng; }, 2, "%"],
+      ["구독 전환 /1천 조회", function (x) { return x.subsPer1k; }, 2, ""]
+    ];
+    var best = cols.map(function (c, ci) { if (ci === 0 || ci === 2) return null; var vals = r.map(function (x) { return c[1](x); }).filter(function (v) { return v != null; }); return vals.length > 1 ? Math.max.apply(null, vals) : null; });
+    var h = '<thead><tr><th>변형</th>' + cols.map(function (c) { return '<th>' + c[0] + '</th>'; }).join("") + '</tr></thead><tbody>';
+    if (!r.length) h += '<tr><td colspan="' + (cols.length + 1) + '" class="hint">변형을 추가하면 지표가 여기에 모입니다.</td></tr>';
+    r.forEach(function (x) {
+      h += '<tr><td><span class="tag"><span class="dot" style="background:' + color(x.i) + '"></span>' + esc(x.v.label) + '</span></td>';
+      cols.forEach(function (c, ci) { var v = c[1](x); h += '<td class="num' + (v != null && best[ci] != null && v === best[ci] ? ' best' : '') + '">' + (v == null ? "–" : fmt(v, c[2]) + c[3]) + '</td>'; });
+      h += '</tr>';
+    });
+    $("detail").innerHTML = h + '</tbody>';
+  }
+
+  function renderEditors() {
+    var el = $("editors");
+    var active = document.activeElement && el.contains(document.activeElement) ? document.activeElement.id : null;
+    if (!state.variants.length) { el.innerHTML = state.dbState === "ready" ? '<div class="empty">아직 등록된 변형이 없어요.</div>' : ""; return; }
+    var cpName = CPS.filter(function (c) { return c[0] === state.cp; })[0][1];
+    el.innerHTML = state.variants.map(function (v, i) {
+      var m = (v.metrics && v.metrics[state.cp]) || {}, id = v.id, dis = state.sample || !state.canWrite ? " disabled" : "";
+      var f = function (k, lab, unit) { return '<label class="field" for="f-' + id + '-' + k + '"><span>' + lab + (unit ? " (" + unit + ")" : "") + '</span><input class="num" type="number" inputmode="decimal" min="0" step="any" id="f-' + id + '-' + k + '" data-k="' + k + '" value="' + (m[k] != null ? esc(m[k]) : "") + '"' + dis + '></label>'; };
+      return '<article class="editor" data-id="' + esc(id) + '">' +
+        '<div class="editor-head"><span class="tag"><span class="dot" style="background:' + color(i) + '"></span><input id="l-' + id + '" data-meta="label" value="' + esc(v.label) + '" aria-label="변형 이름" style="font-weight:600;width:9em"' + dis + '></span>' +
+        '<div class="row-actions"><span class="status" id="st-' + id + '"></span>' +
+        (state.confirmDel === id ? '<button class="btn" type="button" data-act="del-yes">삭제 확인</button><button class="btn ghost" type="button" data-act="del-no">취소</button>' : '<button class="btn ghost" type="button" data-act="del"' + dis + '>삭제</button>') +
+        '<button class="btn primary" type="button" data-act="save"' + dis + '>저장</button></div></div>' +
+        '<div class="fields">' +
+        '<label class="field wide" for="h-' + id + '"><span>훅 문구 (첫 1~2초 자막)</span><textarea id="h-' + id + '" data-meta="hook"' + dis + '>' + esc(v.hook) + '</textarea></label>' +
+        '<label class="field wide" for="t-' + id + '"><span>쇼츠 제목</span><input id="t-' + id + '" data-meta="title" value="' + esc(v.title) + '"' + dis + '></label>' +
+        '<label class="field" for="u-' + id + '"><span>쇼츠 링크</span><input id="u-' + id + '" data-meta="url" value="' + esc(v.url) + '" placeholder="https://youtube.com/shorts/…"' + dis + '></label>' +
+        '<label class="field" for="p-' + id + '"><span>업로드 일시</span><input id="p-' + id + '" type="datetime-local" data-meta="publishedAt" value="' + esc(v.publishedAt) + '"' + dis + '></label>' +
+        '</div><p class="metric-title">' + cpName + ' 시점 수치</p><div class="fields">' +
+        FIELDS.map(function (x) { return f(x[0], x[1], x[2]); }).join("") + '</div></article>';
+    }).join("");
+    if (active && $(active)) $(active).focus();
+  }
+
+  function render() { renderControls(); renderNotice(); renderVerdicts(); renderChart(); renderDetail(); renderEditors(); }
+
+  // --- events ---
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.cp) { state.cp = b.dataset.cp; try { localStorage.setItem("ab-cp", state.cp); } catch (er) {} render(); return; }
+    if (b.id === "sampleOn") { state.sample = true; state.cp = "h24"; render(); return; }
+    if (b.id === "sampleOff") { state.sample = false; render(); return; }
+    if (b.id === "addBtn") { addVariant(); return; }
+    var card = b.closest(".editor"); if (!card) return;
+    var id = card.dataset.id;
+    if (b.dataset.act === "save") saveVariant(card, id);
+    if (b.dataset.act === "del") { state.confirmDel = id; renderEditors(); }
+    if (b.dataset.act === "del-no") { state.confirmDel = null; renderEditors(); }
+    if (b.dataset.act === "del-yes") { state.confirmDel = null; if (state.db) state.db.doc("variants/" + id).delete().catch(function () { setStatus(id, "삭제하지 못했어요. 다시 시도해 주세요."); }); }
+  });
+  $("controlSel").addEventListener("change", function (e) {
+    state.control = e.target.value; render();
+    if (state.db && state.canWrite) state.db.doc("settings/main").set({ control: state.control }).catch(function () {});
+  });
+
+  function setStatus(id, msg) { var s = $("st-" + id); if (s) s.textContent = msg; }
+
+  function saveVariant(card, id) {
+    if (!state.db) return;
+    var meta = {}, metrics = {};
+    card.querySelectorAll("[data-meta]").forEach(function (el) { meta[el.dataset.meta] = el.value.trim(); });
+    card.querySelectorAll("[data-k]").forEach(function (el) { if (el.value !== "") metrics[el.dataset.k] = Number(el.value); });
+    if (metrics.viewedPct != null && (metrics.viewedPct < 0 || metrics.viewedPct > 100)) { setStatus(id, "시청함 비율은 0~100 사이로 넣어 주세요."); return; }
+    meta.metrics = {}; meta.metrics[state.cp] = metrics;
+    setStatus(id, "저장 중…");
+    state.db.doc("variants/" + id).update(meta).then(function () { setStatus(id, "저장됨"); })
+      .catch(function (err) { if (err && err.code === "invalid_argument") { state.canWrite = false; render(); } setStatus(id, "저장하지 못했어요. 편집 권한이 있는지 확인해 주세요."); });
+  }
+
+  function addVariant() {
+    if (!state.db) return;
+    var used = state.variants.map(function (v) { return String(v.label || "").charAt(0); }), letter = "ABCDEFGH".split("").filter(function (l) { return used.indexOf(l) < 0; })[0] || "새 변형";
+    var order = state.variants.reduce(function (m, v) { return Math.max(m, v.order || 0); }, 0) + 1;
+    state.db.collection("variants").add({ label: letter, hook: "", title: "", url: "", publishedAt: "", order: order, metrics: {} })
+      .catch(function (err) { alertNotice(err && err.code === "quota_exceeded" ? "저장 공간이 가득 찼어요. 쓰지 않는 변형을 지워 주세요." : "변형을 추가하지 못했어요. 편집 권한을 확인해 주세요."); });
+  }
+  function alertNotice(msg) { $("notice").innerHTML = '<div class="banner">' + esc(msg) + '</div>'; }
+
+  // --- boot ---
+  render();
+  if (!window.claude || !window.claude.use) { state.dbState = "none"; render(); return; }
+  Promise.all([window.claude.use("db"), window.claude.use("user")]).then(function (res) {
+    var db = res[0], user = res[1];
+    if (!db) { state.dbState = "none"; render(); return; }
+    state.db = db;
+    if (user && user.can) { Promise.resolve(user.can("data.write")).then(function (ok) { if (ok === false) { state.canWrite = false; render(); } }); }
+    db.collection("variants").orderBy("order").onSnapshot(function (snap) {
+      state.variants = snap.docs.map(function (d) { var o = Object.assign({}, d.data()); o.id = d.id; return o; });
+      if (!state.control || !state.variants.some(function (v) { return v.id === state.control; })) state.control = state.variants[0] ? state.variants[0].id : null;
+      state.dbState = "ready";
+      if (!document.activeElement || !$("editors").contains(document.activeElement)) render(); else { renderControls(); renderNotice(); renderVerdicts(); renderChart(); renderDetail(); }
+    }, function () { state.dbState = "none"; render(); });
+    db.doc("settings/main").onSnapshot(function (d) {
+      var c = d.exists && d.data().control;
+      if (c && c !== state.control) { state.control = c; render(); }
+    }, function () {});
+  });
+})();
+</script>
