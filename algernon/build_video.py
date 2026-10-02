@@ -100,7 +100,7 @@ def scene_maze():
     d.line([(px + 40, py + 120), (px + 40, py + 270)], fill=INK, width=14)
     d.line([(px - 75, py - 60), (px - 160, py + 20)], fill=INK, width=14)
     d.text((px, py + 330), "찰리", font=font(44), fill=BLUE, anchor="mm")
-    d.text((620, 940), "앨저넌", font=font(44), fill=ORANGE, anchor="mm")
+    d.text((620, 922), "앨저넌", font=font(44), fill=ORANGE, anchor="mm")
     return im
 
 
