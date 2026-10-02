@@ -100,7 +100,7 @@ def scene_maze():
     d.line([(px + 40, py + 120), (px + 40, py + 270)], fill=INK, width=14)
     d.line([(px - 75, py - 60), (px - 160, py + 20)], fill=INK, width=14)
     d.text((px, py + 330), "찰리", font=font(44), fill=BLUE, anchor="mm")
-    d.text((620, 960), "앨저넌", font=font(44), fill=ORANGE, anchor="mm")
+    d.text((620, 940), "앨저넌", font=font(44), fill=ORANGE, anchor="mm")
     return im
 
 
@@ -227,8 +227,8 @@ CHAPTERS = [(0, "약 한 알로 똑똑해질 수 있다면"), (40, "앨저넌에
             (460, "세 영화, 한자리에"), (540, "앨저넌의 무덤에 꽃을")]
 SUBS = {120: "『본 레거시』", 220: "『트루먼 쇼』", 340: "『사랑의 기적』"}
 KEYWORDS = [(208, 218, "의존", "빌린 지능은 언제든 돌려줘야 할 수 있다"),
-            (328, 338, "각성", "아는 것은 행복일까, 대가일까"),
-            (448, 458, "상실", "잃어 가면서도 기록하는 것, 그게 사람이다")]
+            (328, 338, "각성", "아는 것은 행복일까, 대가일까")]
+# 상실: the 끝까지 기록하는 사람 diagram already prints "잃어 가면서도 기록하는 것, 그게 사람이다"
 
 
 def load_scene(asset_dir, name):
@@ -265,11 +265,13 @@ def overlay_png(kind, a, b, path):
     d = ImageDraw.Draw(im)
     if kind == "chapter":
         main, sub = a
-        d.rounded_rectangle((70, 60, 70 + max(d.textlength(main, font=font(54)), d.textlength(sub, font=font(34, False))) + 90,
-                             60 + (150 if sub else 110)), 20, fill=(30, 22, 18, 215))
-        d.text((115, 115), main, font=font(54), fill="white", anchor="lm")
+        h = 140 if sub else 100
+        y0 = 1060 - h
+        w = max(d.textlength(main, font=font(46)), d.textlength(sub, font=font(32, False))) + 90
+        d.rounded_rectangle((70, y0, 70 + w, 1060), 20, fill=(30, 22, 18, 215))
+        d.text((115, y0 + (42 if sub else 50)), main, font=font(46), fill="white", anchor="lm")
         if sub:
-            d.text((115, 172), sub, font=font(34, False), fill=(235, 215, 170), anchor="lm")
+            d.text((115, y0 + 100), sub, font=font(32, False), fill=(235, 215, 170), anchor="lm")
     else:
         word, line = a, b
         d.rounded_rectangle((260, 900, W - 260, 1020), 30, fill=(30, 22, 18, 225))
@@ -302,6 +304,10 @@ def main(asset_dir, work, out):
     for i, (s, e, src, zoom) in enumerate(SCENES):
         dur = e - s
         png, mp4 = os.path.join(work, f"s{i:02d}.png"), os.path.join(work, f"s{i:02d}.mp4")
+        only = os.environ.get("ONLY")
+        if only and str(i) not in only.split(",") and os.path.exists(mp4):
+            clips.append(mp4)
+            continue
         load_scene(asset_dir, src).save(png)
         z = f"1+0.05*t/{dur}" if zoom == "in" else f"1.05-0.05*t/{dur}"
         chain = (f"[0:v]scale=w='trunc(({W}*({z}))/2)*2':h=-2:eval=frame,crop={W}:{H},"
