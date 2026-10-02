@@ -282,27 +282,8 @@ def run(cmd):
     subprocess.run(cmd, check=True, capture_output=True)
 
 
-def main(asset_dir, work, out):
-    os.makedirs(work, exist_ok=True)
-    clips = []
-    for i, (s, e, src, zoom) in enumerate(SCENES):
-        dur = e - s
-        png, mp4 = os.path.join(work, f"s{i:02d}.png"), os.path.join(work, f"s{i:02d}.mp4")
-        load_scene(asset_dir, src).save(png)
-        z = f"1+0.05*t/{dur}" if zoom == "in" else f"1.05-0.05*t/{dur}"
-        vf = (f"scale=w='trunc(({W}*({z}))/2)*2':h=-2:eval=frame,crop={W}:{H},"
-              f"fade=in:st=0:d=0.4,fade=out:st={dur - 0.4}:d=0.4,format=yuv420p")
-        run(["ffmpeg", "-y", "-loop", "1", "-framerate", str(FPS), "-t", str(dur), "-i", png,
-             "-vf", vf, "-c:v", "libx264", "-preset", "veryfast", "-crf", "17", "-r", str(FPS), mp4])
-        clips.append(mp4)
-        print("scene", i, src, f"{s}-{e}s")
-    lst = os.path.join(work, "list.txt")
-    with open(lst, "w") as f:
-        f.writelines(f"file '{os.path.abspath(c)}'\n" for c in clips)
-    base = os.path.join(work, "base.mp4")
-    run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", lst, "-c", "copy", base])
-
-    overlays = []  # (png, start, end)
+def make_overlays(work):
+    overlays = []  # (png, start, end) on the absolute timeline
     for i, (t, name) in enumerate(CHAPTERS):
         p = os.path.join(work, f"ov_c{i}.png")
         overlay_png("chapter", (name, SUBS.get(t, "")), None, p)
@@ -311,17 +292,38 @@ def main(asset_dir, work, out):
         p = os.path.join(work, f"ov_k{i}.png")
         overlay_png("keyword", word, line, p)
         overlays.append((p, a, b))
-    cmd = ["ffmpeg", "-y", "-i", base]
-    for p, _, _ in overlays:
-        cmd += ["-loop", "1", "-framerate", str(FPS), "-i", p]
-    chain, last = [], "[0:v]"
-    for k, (_, a, b) in enumerate(overlays, start=1):
-        chain.append(f"[{k}:v]format=rgba,fade=in:st={a}:d=0.4:alpha=1,fade=out:st={b - 0.4}:d=0.4:alpha=1[o{k}]")
-        chain.append(f"{last}[o{k}]overlay=enable='between(t,{a},{b})':shortest=0[v{k}]")
-        last = f"[v{k}]"
-    cmd += ["-filter_complex", ";".join(chain), "-map", last, "-t", "600", "-c:v", "libx264",
-            "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p", "-movflags", "+faststart", out]
-    run(cmd)
+    return overlays
+
+
+def main(asset_dir, work, out):
+    os.makedirs(work, exist_ok=True)
+    overlays = make_overlays(work)
+    clips = []
+    for i, (s, e, src, zoom) in enumerate(SCENES):
+        dur = e - s
+        png, mp4 = os.path.join(work, f"s{i:02d}.png"), os.path.join(work, f"s{i:02d}.mp4")
+        load_scene(asset_dir, src).save(png)
+        z = f"1+0.05*t/{dur}" if zoom == "in" else f"1.05-0.05*t/{dur}"
+        chain = (f"[0:v]scale=w='trunc(({W}*({z}))/2)*2':h=-2:eval=frame,crop={W}:{H},"
+                 f"fade=in:st=0:d=0.4,fade=out:st={dur - 0.4}:d=0.4,format=yuv420p[v0]")
+        cmd = ["ffmpeg", "-y", "-loop", "1", "-framerate", str(FPS), "-t", str(dur), "-i", png]
+        last = "v0"
+        # banners are composited per scene so the whole video is never re-encoded twice
+        for k, (p, a, b) in enumerate((o for o in overlays if o[1] < e and o[2] > s), start=1):
+            ra, rb = max(a, s) - s, min(b, e) - s
+            cmd += ["-loop", "1", "-framerate", str(FPS), "-t", str(dur), "-i", p]
+            chain += (f";[{k}:v]format=rgba,fade=in:st={ra}:d=0.4:alpha=1,fade=out:st={rb - 0.4}:d=0.4:alpha=1[o{k}]"
+                      f";[{last}][o{k}]overlay=format=auto:shortest=0[v{k}]")
+            last = f"v{k}"
+        cmd += ["-filter_complex", chain, "-map", f"[{last}]", "-c:v", "libx264", "-preset", "veryfast",
+                "-crf", "17", "-r", str(FPS), mp4]
+        run(cmd)
+        clips.append(mp4)
+        print("scene", i, src, f"{s}-{e}s", flush=True)
+    lst = os.path.join(work, "list.txt")
+    with open(lst, "w") as f:
+        f.writelines(f"file '{os.path.abspath(c)}'\n" for c in clips)
+    run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", lst, "-c", "copy", "-movflags", "+faststart", out])
     print("wrote", out)
 
 
